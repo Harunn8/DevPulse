@@ -21,6 +21,7 @@ namespace DevPulseDesk.Services
             Port = source.Port;
 
             IsUdp = source.IsUdpBased();
+            InMaintenance = source.InMaintenance || source.Pag?.InMaintenance == true;
         }
 
         public PagDeviceModel Source { get; }
@@ -29,6 +30,7 @@ namespace DevPulseDesk.Services
         public string Host { get; }
         public int Port { get; }
         public bool IsUdp { get; }
+        public bool InMaintenance { get; }
 
         public TestState State { get; private set; } = TestState.Pending;
         public StageState[] Stages { get; } = new StageState[StageCount];

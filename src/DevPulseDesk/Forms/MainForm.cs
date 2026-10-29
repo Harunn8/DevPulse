@@ -215,9 +215,9 @@ namespace DevPulseDesk.Forms
                     _toast.Notify(TestLogLevel.Success, "Cihazlar hazır", $"{devices.Count} cihaz yüklendi. Başlatmak için F5'e basabilirsiniz.");
                 }
 
-                _items = devices.Where(d => !d.InMaintenance).Select(d => new DeviceTestItem(d)).ToList();
-                var maintenance = devices.Count - _items.Count;
-                if (maintenance > 0) _log.Add(TestLogLevel.Warning, $"{maintenance} cihaz bakım modunda olduğu için listeye alınmadı.");
+                _items = devices.Select(d => new DeviceTestItem(d)).ToList();
+                var maintenance = _items.Count(i => i.InMaintenance);
+                if (maintenance > 0) _log.Add(TestLogLevel.Info, $"{maintenance} cihaz bakım modunda (listede \"Bakımda\" olarak işaretlendi).");
             }
             catch (Exception ex)
             {
