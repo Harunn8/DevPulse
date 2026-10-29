@@ -25,7 +25,7 @@ namespace DevPulseApplication.HttpClients.Services
 
         public async Task<List<Device>> GetDeviceById(Guid id)
         {
-            
+            var device = await _httpClient.GetAsync($"{BaseUrl}/{_settings.GetDeviceByIdUrl}/{id}");
         }
 
         public async Task<List<PagDeviceModel>> GetPagDevices()
