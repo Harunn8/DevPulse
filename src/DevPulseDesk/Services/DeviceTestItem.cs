@@ -5,25 +5,6 @@ namespace DevPulseDesk.Services
 {
     public enum TestState { Pending, Running, Success, Fail, Cancelled }
 
-    public enum TestStage { Resolve, Ping, Port, Report }
-
-    public enum StageState { Waiting, Active, Passed, Warning, Skipped, Failed }
-
-    public enum LogLevel { Info, Success, Warning, Error, System }
-
-    public enum TestEventKind { Started, Stage, Finished }
-
-    /// <summary>Test motorundan UI'a akan olay. UI iş parçacığında <see cref="DeviceTestItem.Apply"/> ile uygulanır.</summary>
-    public sealed record TestEvent(
-        DeviceTestItem Item,
-        TestEventKind Kind,
-        TestStage Stage,
-        StageState State,
-        string Message,
-        LogLevel Level,
-        long? LatencyMs = null,
-        TestResultResponse? Result = null);
-
     /// <summary>Bir PAG cihazının arayüzdeki test durumu.</summary>
     public sealed class DeviceTestItem
     {
@@ -32,20 +13,14 @@ namespace DevPulseDesk.Services
         public DeviceTestItem(PagDeviceModel source)
         {
             Source = source;
-            Name = string.IsNullOrWhiteSpace(source.Name) ? source.Device?.ModelName ?? "Adsız cihaz" : source.Name;
+            Name = source.GetDisplayName();
             var brand = string.Join(" ", new[] { source.Device?.BrandName, source.Device?.ModelName }.Where(s => !string.IsNullOrWhiteSpace(s)));
             Subtitle = string.Join("  •  ", new[] { brand, source.Pag?.PagName }.Where(s => !string.IsNullOrWhiteSpace(s)));
             if (Subtitle.Length == 0) Subtitle = source.Device?.CategoryName ?? "Cihaz";
             Host = source.IpHost?.Trim() ?? "";
             Port = source.Port;
 
-            var connection = $"{source.Device?.ConnectionTypeName} {source.Device?.CommunicationTypeName}";
-            IsUdp = connection.Contains("udp", StringComparison.OrdinalIgnoreCase) || connection.Contains("snmp", StringComparison.OrdinalIgnoreCase);
-
-            // Timeout değeri saniye veya milisaniye olarak gelebilir.
-            var timeout = source.Timeout;
-            TimeoutMs = timeout <= 0 ? 2000 : timeout <= 60 ? timeout * 1000 : timeout;
-            TimeoutMs = Math.Clamp(TimeoutMs, 500, 10000);
+            IsUdp = source.IsUdpBased();
         }
 
         public PagDeviceModel Source { get; }
@@ -54,7 +29,6 @@ namespace DevPulseDesk.Services
         public string Host { get; }
         public int Port { get; }
         public bool IsUdp { get; }
-        public int TimeoutMs { get; }
 
         public TestState State { get; private set; } = TestState.Pending;
         public StageState[] Stages { get; } = new StageState[StageCount];
@@ -89,7 +63,7 @@ namespace DevPulseDesk.Services
             StatusText = "Test iptal edildi";
         }
 
-        public void Apply(TestEvent e)
+        public void Apply(DeviceTestProgress e)
         {
             switch (e.Kind)
             {

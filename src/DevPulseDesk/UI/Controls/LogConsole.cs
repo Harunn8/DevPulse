@@ -1,3 +1,4 @@
+using DevPulseApplication.Models;
 using System.Drawing.Drawing2D;
 using DevPulseDesk.Services;
 using DevPulseDesk.UI.Animation;
@@ -25,7 +26,7 @@ namespace DevPulseDesk.UI.Controls
             BackColor = Theme.Background;
         }
 
-        public void Add(LogLevel level, string text)
+        public void Add(TestLogLevel level, string text)
         {
             _entries.Add(new Entry(DateTime.Now.ToString("HH:mm:ss"), level, text, _time));
             if (_entries.Count > MaxEntries) _entries.RemoveRange(0, _entries.Count - MaxEntries);
@@ -183,10 +184,10 @@ namespace DevPulseDesk.UI.Controls
 
             var (tag, color) = entry.Level switch
             {
-                LogLevel.Success => (" OK ", Theme.Success),
-                LogLevel.Error => ("FAIL", Theme.Danger),
-                LogLevel.Warning => ("WARN", Theme.Warning),
-                LogLevel.System => ("SYS ", Theme.Accent2),
+                TestLogLevel.Success => (" OK ", Theme.Success),
+                TestLogLevel.Error => ("FAIL", Theme.Danger),
+                TestLogLevel.Warning => ("WARN", Theme.Warning),
+                TestLogLevel.System => ("SYS ", Theme.Accent2),
                 _ => ("INFO", Theme.Accent)
             };
 
@@ -209,11 +210,11 @@ namespace DevPulseDesk.UI.Controls
             using (var tagText = new SolidBrush(Theme.Alpha(color, appear)))
                 g.DrawString(tag, Theme.Mono(10.5f, FontStyle.Bold), tagText, tagRect, Theme.Center);
 
-            var textColor = entry.Level is LogLevel.Error or LogLevel.Success ? Theme.TextPrimary : Theme.TextSecondary;
+            var textColor = entry.Level is TestLogLevel.Error or TestLogLevel.Success ? Theme.TextPrimary : Theme.TextSecondary;
             using var text = new SolidBrush(Theme.Alpha(textColor, appear));
             g.DrawString(entry.Text, font, text, new RectangleF(tagRect.Right + 8, y, width - (tagRect.Right - x) - 12, LineHeight), Theme.LeftCenter);
         }
 
-        private sealed record Entry(string Time, LogLevel Level, string Text, float Born);
+        private sealed record Entry(string Time, TestLogLevel Level, string Text, float Born);
     }
 }

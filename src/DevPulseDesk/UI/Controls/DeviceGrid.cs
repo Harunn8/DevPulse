@@ -1,3 +1,4 @@
+using DevPulseApplication.Models;
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using DevPulseDesk.Services;

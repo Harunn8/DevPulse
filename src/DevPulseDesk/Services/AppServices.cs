@@ -1,6 +1,10 @@
 using System.Text.Json;
 using DevPulseApplication.HttpClients.Services;
+using DevPulseApplication.HttpClients.Services.Base;
 using DevPulseApplication.HttpClients.Settings;
+using DevPulseApplication.Models;
+using DevPulseApplication.Services;
+using DevPulseApplication.Services.Base;
 using Microsoft.Extensions.Options;
 
 namespace DevPulseDesk.Services
@@ -63,11 +67,17 @@ namespace DevPulseDesk.Services
             return new AppServices(settings, serverUrl, parallelism, minStage);
         }
 
-        public LoginHttpClientService CreateLoginService(string baseUrl) =>
-            new(Options.Create(Settings)) { BaseUrl = baseUrl };
+        public ILoginHttpClientService CreateLoginService(string baseUrl) =>
+            new LoginHttpClientService(Options.Create(Settings)) { BaseUrl = baseUrl };
 
-        public DeviceHttpClientService CreateDeviceService(Session session) =>
-            new(Options.Create(Settings)) { BaseUrl = session.BaseUrl, Token = session.Token };
+        public IDeviceHttpClientService CreateDeviceService(Session session) =>
+            new DeviceHttpClientService(Options.Create(Settings)) { BaseUrl = session.BaseUrl, Token = session.Token };
+
+        public IDeviceTestService CreateTestService(Session session)
+        {
+            var options = Options.Create(new DeviceTestOptions { Parallelism = Parallelism, MinStageDurationMs = MinStageDurationMs });
+            return session.IsDemo ? new DemoDeviceTestService(options) : new DeviceTestService(options);
+        }
 
         public static string NormalizeUrl(string url)
         {

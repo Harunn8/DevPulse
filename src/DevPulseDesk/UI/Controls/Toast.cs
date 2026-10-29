@@ -1,3 +1,4 @@
+using DevPulseApplication.Models;
 using System.Drawing.Drawing2D;
 using DevPulseDesk.Services;
 using DevPulseDesk.UI.Animation;
@@ -10,7 +11,7 @@ namespace DevPulseDesk.UI.Controls
         private const float DisplaySeconds = 4.2f;
         private string _title = "";
         private string _message = "";
-        private LogLevel _level;
+        private TestLogLevel _level;
         private float _life;
         private Tween? _slide;
         private bool _leaving;
@@ -23,7 +24,7 @@ namespace DevPulseDesk.UI.Controls
             Size = Dpi.S(360, 84);
         }
 
-        public void Notify(LogLevel level, string title, string message)
+        public void Notify(TestLogLevel level, string title, string message)
         {
             _level = level;
             _title = title;
@@ -81,17 +82,17 @@ namespace DevPulseDesk.UI.Controls
         {
             var color = _level switch
             {
-                LogLevel.Success => Theme.Success,
-                LogLevel.Error => Theme.Danger,
-                LogLevel.Warning => Theme.Warning,
-                LogLevel.System => Theme.Accent2,
+                TestLogLevel.Success => Theme.Success,
+                TestLogLevel.Error => Theme.Danger,
+                TestLogLevel.Warning => Theme.Warning,
+                TestLogLevel.System => Theme.Accent2,
                 _ => Theme.Accent
             };
             var glyph = _level switch
             {
-                LogLevel.Success => Glyph.Check,
-                LogLevel.Error => Glyph.Cancel,
-                LogLevel.Warning => Glyph.Warning,
+                TestLogLevel.Success => Glyph.Check,
+                TestLogLevel.Error => Glyph.Cancel,
+                TestLogLevel.Warning => Glyph.Warning,
                 _ => Glyph.Info
             };
 

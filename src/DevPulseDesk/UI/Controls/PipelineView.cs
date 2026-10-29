@@ -1,3 +1,4 @@
+using DevPulseApplication.Models;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using DevPulseDesk.Services;
@@ -35,7 +36,7 @@ namespace DevPulseDesk.UI.Controls
         private int _success;
         private int _fail;
         private string _detail = "Başlatmak için \"Testi Başlat\" butonuna tıklayın.";
-        private LogLevel _detailLevel = LogLevel.Info;
+        private TestLogLevel _detailLevel = TestLogLevel.Info;
         private float _time;
 
         public PipelineView()
@@ -56,7 +57,7 @@ namespace DevPulseDesk.UI.Controls
             foreach (var v in _completion) v.Target = 0;
             _progress.Target = 0;
             _elapsed.Reset();
-            SetDetail(total > 0 ? $"{total} cihaz teste hazır. Başlatmak için \"Testi Başlat\" butonuna tıklayın." : "Test edilecek cihaz bulunamadı.", LogLevel.Info);
+            SetDetail(total > 0 ? $"{total} cihaz teste hazır. Başlatmak için \"Testi Başlat\" butonuna tıklayın." : "Test edilecek cihaz bulunamadı.", TestLogLevel.Info);
             StartTicking();
         }
 
@@ -65,10 +66,10 @@ namespace DevPulseDesk.UI.Controls
             Reset(total);
             _state = RunState.Running;
             _elapsed.Restart();
-            SetDetail("Test oturumu başlatıldı, cihazlar kuyruğa alınıyor…", LogLevel.System);
+            SetDetail("Test oturumu başlatıldı, cihazlar kuyruğa alınıyor…", TestLogLevel.System);
         }
 
-        public void Update(IReadOnlyList<DeviceTestItem> items, string? detail, LogLevel level)
+        public void Update(IReadOnlyList<DeviceTestItem> items, string? detail, TestLogLevel level)
         {
             Array.Clear(_active);
             Array.Clear(_passed);
@@ -111,11 +112,11 @@ namespace DevPulseDesk.UI.Controls
             SetDetail(cancelled
                 ? $"Test kullanıcı tarafından durduruldu • {_done}/{_total} cihaz tamamlandı"
                 : $"Test tamamlandı • {_success} başarılı, {_fail} başarısız • {_elapsed.Elapsed.TotalSeconds:0.0} sn",
-                cancelled ? LogLevel.Warning : _fail == 0 ? LogLevel.Success : LogLevel.Warning);
+                cancelled ? TestLogLevel.Warning : _fail == 0 ? TestLogLevel.Success : TestLogLevel.Warning);
             StartTicking();
         }
 
-        private void SetDetail(string detail, LogLevel level)
+        private void SetDetail(string detail, TestLogLevel level)
         {
             if (detail == _detail) return;
             _detail = detail;
@@ -368,18 +369,18 @@ namespace DevPulseDesk.UI.Controls
 
             var color = _detailLevel switch
             {
-                LogLevel.Success => Theme.Success,
-                LogLevel.Error => Theme.Danger,
-                LogLevel.Warning => Theme.Warning,
-                LogLevel.System => Theme.Accent2,
+                TestLogLevel.Success => Theme.Success,
+                TestLogLevel.Error => Theme.Danger,
+                TestLogLevel.Warning => Theme.Warning,
+                TestLogLevel.System => Theme.Accent2,
                 _ => Theme.Accent
             };
             var fade = _detailFade.Value;
             var glyph = _detailLevel switch
             {
-                LogLevel.Success => Glyph.Check,
-                LogLevel.Error => Glyph.Cancel,
-                LogLevel.Warning => Glyph.Warning,
+                TestLogLevel.Success => Glyph.Check,
+                TestLogLevel.Error => Glyph.Cancel,
+                TestLogLevel.Warning => Glyph.Warning,
                 _ => _state == RunState.Running ? Glyph.Sync : Glyph.Info
             };
 

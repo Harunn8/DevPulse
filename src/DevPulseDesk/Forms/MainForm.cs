@@ -1,6 +1,7 @@
-using DevPulseApplication.HttpClients.Services;
+using DevPulseApplication.HttpClients.Services.Base;
 using DevPulseApplication.Models;
 using DevPulseApplication.Responses;
+using DevPulseApplication.Services.Base;
 using DevPulseDesk.Services;
 using DevPulseDesk.UI;
 using DevPulseDesk.UI.Animation;
@@ -14,8 +15,9 @@ namespace DevPulseDesk.Forms
     internal sealed class MainForm : BorderlessForm
     {
         private readonly Session _session;
-        private readonly DeviceHttpClientService? _deviceService;
-        private readonly DeviceTestRunner _runner;
+        private readonly IDeviceHttpClientService? _deviceService;
+        private readonly IDeviceTestService _testService;
+        private readonly int _parallelism;
 
         private readonly TitleBar _titleBar;
         private readonly SideNav _nav;
@@ -42,12 +44,8 @@ namespace DevPulseDesk.Forms
         {
             _session = session;
             _deviceService = session.IsDemo ? null : services.CreateDeviceService(session);
-            _runner = new DeviceTestRunner
-            {
-                Simulate = session.IsDemo,
-                Parallelism = services.Parallelism,
-                MinStageDurationMs = services.MinStageDurationMs
-            };
+            _testService = services.CreateTestService(session);
+            _parallelism = services.Parallelism;
 
             Text = "DevPulse – Test Merkezi";
             Resizable = true;
@@ -172,7 +170,7 @@ namespace DevPulseDesk.Forms
                 Animator.Animate(1, Easing.Linear, _ => { }, card.Appear, delayMs: 120 + i * 90);
             }
 
-            _log.Add(LogLevel.System, $"Oturum açıldı: {_session.UserName}{(_session.IsDemo ? " (demo modu – sonuçlar simüle edilir)" : $" @ {_session.BaseUrl}")}");
+            _log.Add(TestLogLevel.System, $"Oturum açıldı: {_session.UserName}{(_session.IsDemo ? " (demo modu – sonuçlar simüle edilir)" : $" @ {_session.BaseUrl}")}");
             _ = LoadDevicesAsync();
         }
 
@@ -197,7 +195,7 @@ namespace DevPulseDesk.Forms
             _loading = true;
             _refreshButton.IsLoading = true;
             _grid.IsLoading = true;
-            _log.Add(LogLevel.Info, "Cihaz listesi sunucudan alınıyor…");
+            _log.Add(TestLogLevel.Info, "Cihaz listesi sunucudan alınıyor…");
 
             try
             {
@@ -207,24 +205,24 @@ namespace DevPulseDesk.Forms
 
                 if (devices == null)
                 {
-                    _log.Add(LogLevel.Error, "Cihaz listesi alınamadı (sunucu başarılı yanıt dönmedi).");
-                    _toast.Notify(LogLevel.Error, "Cihazlar alınamadı", "Sunucu cihaz listesini döndürmedi. Oturum süresi dolmuş olabilir.");
+                    _log.Add(TestLogLevel.Error, "Cihaz listesi alınamadı (sunucu başarılı yanıt dönmedi).");
+                    _toast.Notify(TestLogLevel.Error, "Cihazlar alınamadı", "Sunucu cihaz listesini döndürmedi. Oturum süresi dolmuş olabilir.");
                     devices = new List<PagDeviceModel>();
                 }
                 else
                 {
-                    _log.Add(LogLevel.Success, $"{devices.Count} cihaz yüklendi.");
-                    _toast.Notify(LogLevel.Success, "Cihazlar hazır", $"{devices.Count} cihaz yüklendi. Başlatmak için F5'e basabilirsiniz.");
+                    _log.Add(TestLogLevel.Success, $"{devices.Count} cihaz yüklendi.");
+                    _toast.Notify(TestLogLevel.Success, "Cihazlar hazır", $"{devices.Count} cihaz yüklendi. Başlatmak için F5'e basabilirsiniz.");
                 }
 
                 _items = devices.Where(d => !d.InMaintenance).Select(d => new DeviceTestItem(d)).ToList();
                 var maintenance = devices.Count - _items.Count;
-                if (maintenance > 0) _log.Add(LogLevel.Warning, $"{maintenance} cihaz bakım modunda olduğu için listeye alınmadı.");
+                if (maintenance > 0) _log.Add(TestLogLevel.Warning, $"{maintenance} cihaz bakım modunda olduğu için listeye alınmadı.");
             }
             catch (Exception ex)
             {
-                _log.Add(LogLevel.Error, $"Cihaz listesi alınamadı: {ex.Message}");
-                _toast.Notify(LogLevel.Error, "Bağlantı hatası", "Cihaz listesi alınamadı. Sunucu bağlantısını kontrol edin.");
+                _log.Add(TestLogLevel.Error, $"Cihaz listesi alınamadı: {ex.Message}");
+                _toast.Notify(TestLogLevel.Error, "Bağlantı hatası", "Cihaz listesi alınamadı. Sunucu bağlantısını kontrol edin.");
                 _items = new List<DeviceTestItem>();
             }
             finally
@@ -244,13 +242,13 @@ namespace DevPulseDesk.Forms
             if (_cts != null)
             {
                 _cts.Cancel();
-                _log.Add(LogLevel.Warning, "Durdurma isteği gönderildi, aktif bağlantılar kapatılıyor…");
+                _log.Add(TestLogLevel.Warning, "Durdurma isteği gönderildi, aktif bağlantılar kapatılıyor…");
                 return;
             }
             if (_loading) return;
             if (_items.Count == 0)
             {
-                _toast.Notify(LogLevel.Warning, "Test edilecek cihaz yok", "Önce cihaz listesini yenileyin.");
+                _toast.Notify(TestLogLevel.Warning, "Test edilecek cihaz yok", "Önce cihaz listesini yenileyin.");
                 return;
             }
 
@@ -265,17 +263,19 @@ namespace DevPulseDesk.Forms
             _nav.PulseCaption = "Test sürüyor…";
             SetRunningUi(true);
             UpdateStats();
-            _log.Add(LogLevel.System, $"Test oturumu #{runId} başladı • {_items.Count} cihaz • {_runner.Parallelism} paralel kanal");
+            _log.Add(TestLogLevel.System, $"Test oturumu #{runId} başladı • {_items.Count} cihaz • {_parallelism} paralel kanal");
 
-            var progress = new Progress<TestEvent>(e =>
+            // Kütüphanedeki test servisi cihaz modeliyle (PagDeviceModel) olay yayınlar; karşılık gelen kart bulunur.
+            var itemsByDevice = _items.ToDictionary(i => i.Source);
+            var progress = new Progress<DeviceTestProgress>(e =>
             {
-                if (runId == _runId && !IsDisposed) OnTestEvent(e);
+                if (runId == _runId && !IsDisposed && itemsByDevice.TryGetValue(e.Device, out var item)) OnTestProgress(item, e);
             });
 
             var cancelled = false;
             try
             {
-                await _runner.RunAsync(_items, progress, cts.Token);
+                await _testService.RunTestsAsync(_items.Select(i => i.Source).ToList(), progress, cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -283,7 +283,7 @@ namespace DevPulseDesk.Forms
             }
             catch (Exception ex)
             {
-                _log.Add(LogLevel.Error, $"Test motoru beklenmeyen bir hatayla durdu: {ex.Message}");
+                _log.Add(TestLogLevel.Error, $"Test motoru beklenmeyen bir hatayla durdu: {ex.Message}");
                 cancelled = true;
             }
             finally
@@ -294,7 +294,7 @@ namespace DevPulseDesk.Forms
             if (IsDisposed) return;
             foreach (var item in _items.Where(i => !i.IsDone)) item.Cancel();
             _grid.NotifyAllChanged();
-            _pipeline.Update(_items, null, LogLevel.Info);
+            _pipeline.Update(_items, null, TestLogLevel.Info);
             _pipeline.Complete(cancelled);
             SetRunningUi(false);
             UpdateStats();
@@ -306,15 +306,15 @@ namespace DevPulseDesk.Forms
 
             if (cancelled)
             {
-                _log.Add(LogLevel.Warning, $"Test oturumu #{runId} durduruldu • {success + fail}/{_items.Count} cihaz tamamlandı");
-                _toast.Notify(LogLevel.Warning, "Test durduruldu", $"{success + fail} cihazın testi tamamlandı, kalanlar iptal edildi.");
+                _log.Add(TestLogLevel.Warning, $"Test oturumu #{runId} durduruldu • {success + fail}/{_items.Count} cihaz tamamlandı");
+                _toast.Notify(TestLogLevel.Warning, "Test durduruldu", $"{success + fail} cihazın testi tamamlandı, kalanlar iptal edildi.");
             }
             else
             {
                 var results = _items.Select(i => i.Result).OfType<TestResultResponse>().ToList();
-                _log.Add(fail == 0 ? LogLevel.Success : LogLevel.Warning,
+                _log.Add(fail == 0 ? TestLogLevel.Success : TestLogLevel.Warning,
                     $"Test oturumu #{runId} tamamlandı • {results.Count(r => r.Status == TestResult.Success)} başarılı, {results.Count(r => r.Status == TestResult.Fail)} başarısız");
-                _toast.Notify(fail == 0 ? LogLevel.Success : LogLevel.Warning,
+                _toast.Notify(fail == 0 ? TestLogLevel.Success : TestLogLevel.Warning,
                     fail == 0 ? "Tüm cihazlar sağlıklı" : "Test tamamlandı",
                     fail == 0 ? $"{success} cihazın tamamı testi başarıyla geçti." : $"{success} başarılı, {fail} başarısız cihaz. Detaylar için filtreyi kullanın.");
             }
@@ -329,14 +329,14 @@ namespace DevPulseDesk.Forms
             _refreshButton.Enabled = !running;
         }
 
-        private void OnTestEvent(TestEvent e)
+        private void OnTestProgress(DeviceTestItem item, DeviceTestProgress e)
         {
-            e.Item.Apply(e);
-            _grid.NotifyChanged(e.Item);
+            item.Apply(e);
+            _grid.NotifyChanged(item);
 
-            if (e.Kind != TestEventKind.Started) _log.Add(e.State == StageState.Active ? LogLevel.Info : e.Level, e.State == StageState.Active ? $"{e.Item.Name} • {e.Message}" : e.Message);
+            if (e.Kind != TestEventKind.Started) _log.Add(e.State == StageState.Active ? TestLogLevel.Info : e.Level, e.State == StageState.Active ? $"{item.Name} • {e.Message}" : e.Message);
 
-            var detail = e.Kind == TestEventKind.Started ? null : e.State == StageState.Active ? $"{e.Item.Name} • {e.Message}" : e.Message;
+            var detail = e.Kind == TestEventKind.Started ? null : e.State == StageState.Active ? $"{item.Name} • {e.Message}" : e.Message;
             _pipeline.Update(_items, detail, e.Level);
             UpdateStats();
         }
