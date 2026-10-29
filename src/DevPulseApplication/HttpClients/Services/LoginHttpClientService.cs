@@ -26,7 +26,7 @@ namespace DevPulseApplication.HttpClients.Services
 
             if (response?.StatusCode != System.Net.HttpStatusCode.OK) return null;
 
-            var userResult = JsonConvert.DeserializeObject<LoginResponse>(await response.Content.ReadAsStringAsync());
+            var userResult = ApiResponseReader.Read<LoginResponse>(await response.Content.ReadAsStringAsync()); // yanıt { status, message, result } zarfı ile gelir
 
             return userResult;
         }

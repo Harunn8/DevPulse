@@ -1,6 +1,7 @@
 ﻿using DevPulseApplication.HttpClients.Services.Base;
 using DevPulseApplication.HttpClients.Settings;
 using DevPulseApplication.Models;
+using DevPulseApplication.Responses;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
@@ -25,7 +26,15 @@ namespace DevPulseApplication.HttpClients.Services
 
         public async Task<List<Device>> GetDeviceById(Guid id)
         {
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token);
+
             var device = await _httpClient.GetAsync($"{BaseUrl}/{_settings.GetDeviceByIdUrl}/{id}");
+
+            if (device?.StatusCode != HttpStatusCode.OK) return null;
+
+            var response = ApiResponseReader.Read<List<Device>>(await device.Content.ReadAsStringAsync());
+
+            return response;
         }
 
         public async Task<List<PagDeviceModel>> GetPagDevices()
@@ -36,7 +45,7 @@ namespace DevPulseApplication.HttpClients.Services
 
             if (pagDevices?.StatusCode != HttpStatusCode.OK) return null;
 
-            var response = JsonConvert.DeserializeObject<List<PagDeviceModel>>(await pagDevices.Content.ReadAsStringAsync());
+            var response = ApiResponseReader.Read<List<PagDeviceModel>>(await pagDevices.Content.ReadAsStringAsync());
 
             return response;
         }

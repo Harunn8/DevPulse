@@ -6,6 +6,22 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+    <AssemblyTitle>DevPulse Desk</AssemblyTitle>
+    <Product>DevPulse</Product>
+    <Version>1.0.0</Version>
+    <!-- Windows dışı ortamlarda (CI vb.) derlemeye izin verir; Windows'ta etkisi yoktur. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DevPulseApplication\DevPulseApplication.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
