@@ -1,6 +1,7 @@
 ﻿using DevPulseApplication.HttpClients.Services.Base;
 using DevPulseApplication.HttpClients.Settings;
 using DevPulseApplication.Models;
+using DevPulseApplication.Responses;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
@@ -31,7 +32,7 @@ namespace DevPulseApplication.HttpClients.Services
 
             if (device?.StatusCode != HttpStatusCode.OK) return null;
 
-            var response = JsonConvert.DeserializeObject<List<Device>>(await device.Content.ReadAsStringAsync());
+            var response = ApiResponseReader.Read<List<Device>>(await device.Content.ReadAsStringAsync());
 
             return response;
         }
@@ -44,7 +45,7 @@ namespace DevPulseApplication.HttpClients.Services
 
             if (pagDevices?.StatusCode != HttpStatusCode.OK) return null;
 
-            var response = JsonConvert.DeserializeObject<List<PagDeviceModel>>(await pagDevices.Content.ReadAsStringAsync());
+            var response = ApiResponseReader.Read<List<PagDeviceModel>>(await pagDevices.Content.ReadAsStringAsync());
 
             return response;
         }
