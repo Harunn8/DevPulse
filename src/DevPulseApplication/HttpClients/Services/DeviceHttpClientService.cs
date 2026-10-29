@@ -25,7 +25,15 @@ namespace DevPulseApplication.HttpClients.Services
 
         public async Task<List<Device>> GetDeviceById(Guid id)
         {
-            
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token);
+
+            var devices = await _httpClient.GetAsync($"{BaseUrl}/{_settings.GetDeviceByIdUrl}/{id}");
+
+            if (devices?.StatusCode != HttpStatusCode.OK) return null;
+
+            var response = JsonConvert.DeserializeObject<List<Device>>(await devices.Content.ReadAsStringAsync());
+
+            return response;
         }
 
         public async Task<List<PagDeviceModel>> GetPagDevices()
