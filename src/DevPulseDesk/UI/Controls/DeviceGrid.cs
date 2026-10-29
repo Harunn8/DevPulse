@@ -410,8 +410,23 @@ namespace DevPulseDesk.UI.Controls
             var textW = badge.X - textX - 8;
             using (var name = new SolidBrush(C(Theme.TextPrimary)))
                 g.DrawString(item.Name, Theme.SemiBold(14.5f), name, new RectangleF(textX, rect.Y + 15, textW, 22), Theme.LeftCenter);
+            var subX = textX;
+            if (item.InMaintenance)
+            {
+                // Bakımdaki cihaz etiketi
+                var chipFont = Theme.Font(9.5f, FontStyle.Bold);
+                var chipW = g.MeasureString("BAKIMDA", chipFont).Width + 10;
+                var chip = new RectangleF(textX, rect.Y + 37, chipW, 16);
+                using (var chipPath = Theme.RoundRect(chip, 8))
+                using (var chipFill = new SolidBrush(C(Theme.Alpha(Theme.Warning, 40))))
+                {
+                    g.FillPath(chipFill, chipPath);
+                }
+                using (var chipText = new SolidBrush(C(Theme.Warning))) g.DrawString("BAKIMDA", chipFont, chipText, chip, Theme.Center);
+                subX = chip.Right + 6;
+            }
             using (var sub = new SolidBrush(C(Theme.TextMuted)))
-                g.DrawString(item.Subtitle, Theme.Font(12f), sub, new RectangleF(textX, rect.Y + 36, rect.Right - textX - 14, 18), Theme.LeftCenter);
+                g.DrawString(item.Subtitle, Theme.Font(12f), sub, new RectangleF(subX, rect.Y + 36, rect.Right - subX - 14, 18), Theme.LeftCenter);
 
             // Uç nokta ve gecikme
             var rowY = rect.Y + 66;
