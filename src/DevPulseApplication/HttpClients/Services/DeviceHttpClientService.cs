@@ -27,11 +27,11 @@ namespace DevPulseApplication.HttpClients.Services
         {
             _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token);
 
-            var devices = await _httpClient.GetAsync($"{BaseUrl}/{_settings.GetDeviceByIdUrl}/{id}");
+            var device = await _httpClient.GetAsync($"{BaseUrl}/{_settings.GetDeviceByIdUrl}/{id}");
 
-            if (devices?.StatusCode != HttpStatusCode.OK) return null;
+            if (device?.StatusCode != HttpStatusCode.OK) return null;
 
-            var response = JsonConvert.DeserializeObject<List<Device>>(await devices.Content.ReadAsStringAsync());
+            var response = JsonConvert.DeserializeObject<List<Device>>(await device.Content.ReadAsStringAsync());
 
             return response;
         }
