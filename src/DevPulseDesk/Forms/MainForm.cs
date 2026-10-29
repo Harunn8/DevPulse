@@ -18,6 +18,7 @@ namespace DevPulseDesk.Forms
         private readonly IDeviceHttpClientService? _deviceService;
         private readonly IDeviceTestService _testService;
         private readonly int _parallelism;
+        private readonly string _devicesEndpoint;
 
         private readonly TitleBar _titleBar;
         private readonly SideNav _nav;
@@ -44,6 +45,7 @@ namespace DevPulseDesk.Forms
         {
             _session = session;
             _deviceService = session.IsDemo ? null : services.CreateDeviceService(session);
+            _devicesEndpoint = $"{session.BaseUrl}/{services.Settings.GetPagDevicesUrl}";
             _testService = services.CreateTestService(session);
             _parallelism = services.Parallelism;
 
@@ -195,7 +197,7 @@ namespace DevPulseDesk.Forms
             _loading = true;
             _refreshButton.IsLoading = true;
             _grid.IsLoading = true;
-            _log.Add(TestLogLevel.Info, "Cihaz listesi sunucudan alınıyor…");
+            _log.Add(TestLogLevel.Info, _session.IsDemo ? "Demo cihaz listesi hazırlanıyor…" : $"Cihaz listesi alınıyor: GET {_devicesEndpoint}");
 
             try
             {
@@ -211,7 +213,7 @@ namespace DevPulseDesk.Forms
                 }
                 else
                 {
-                    _log.Add(TestLogLevel.Success, $"{devices.Count} cihaz yüklendi.");
+                    _log.Add(TestLogLevel.Success, $"Sunucudan {devices.Count} cihaz geldi.");
                     _toast.Notify(TestLogLevel.Success, "Cihazlar hazır", $"{devices.Count} cihaz yüklendi. Başlatmak için F5'e basabilirsiniz.");
                 }
 
