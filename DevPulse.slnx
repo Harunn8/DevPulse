@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DevPulseApplication/DevPulseApplication.csproj" />
+    <Project Path="src/DevPulseDesk/DevPulseDesk.csproj" />
+  </Folder>
+</Solution>
